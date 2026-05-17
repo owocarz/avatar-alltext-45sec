@@ -1,0 +1,28 @@
+services:
+  yt-clip:
+    build: .
+    restart: always
+    networks:
+      - n8n_default
+    environment:
+      - YT_COOKIES_B64=${YT_COOKIES_B64}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - X_BEARER_TOKEN=${X_BEARER_TOKEN}
+      - YT_PROXY=${YT_PROXY}
+      - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN}
+      - YT_BRIDGE_URL=${YT_BRIDGE_URL}
+      - YT_BRIDGE_SECRET=${YT_BRIDGE_SECRET}
+      - PYTHONUNBUFFERED=1
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=n8n_default
+      - traefik.http.routers.ytclip.rule=Host(`yt-clip.srv1278625.hstgr.cloud`)
+      - traefik.http.routers.ytclip.entrypoints=web,websecure
+      - traefik.http.routers.ytclip.tls=true
+      - traefik.http.routers.ytclip.tls.certresolver=mytlschallenge
+      - traefik.http.services.ytclip.loadbalancer.server.port=7860
+
+networks:
+  n8n_default:
+    external: true
