@@ -99,7 +99,7 @@
         required
       ></textarea>
       <div class="counter-box" id="counter-box">
-        Szacowany czas: <strong id="wc-dur">&mdash;</strong>
+        Estimated duration: <strong id="wc-dur">&mdash;</strong>
       </div>
     </div>
 
@@ -138,7 +138,7 @@
       el.textContent = '—';
     } else {
       var secs = Math.min(60, Math.max(20, Math.round(words / 2.6)));
-      el.textContent = secs + ' sek';
+      el.textContent = secs + ' sec';
     }
   }
 
