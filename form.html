@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avatar ALL-TEXT 45sec Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f9fafb;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08), 0 4px 24px rgba(0,0,0,.06);
+    padding: 36px 40px;
+    width: 100%;
+    max-width: 640px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 28px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  label .req { color: #ef4444; margin-left: 2px; }
+  textarea, select {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #111;
+    background: #fff;
+    transition: border-color .15s;
+    outline: none;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 140px; }
+  textarea:focus, select:focus { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,.12); }
+  .field { margin-bottom: 20px; }
+  .counter-box {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #6b7280;
+    height: 20px;
+  }
+  .counter-box strong { color: #f97316; }
+  button[type=submit] {
+    width: 100%;
+    background: #f97316;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    margin-top: 8px;
+  }
+  button[type=submit]:hover { background: #ea6c0a; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Avatar ALL-TEXT 45sec Generator</h1>
+  <p class="subtitle">Paste narration about any football match. Teams will be detected automatically from the text.</p>
+
+  <form
+    method="POST"
+    action="https://n8n.srv1278625.hstgr.cloud/form/93599006-3aa6-4004-8bb7-e45ffc72f039"
+    enctype="multipart/form-data"
+  >
+    <div class="field">
+      <label for="narration">narration<span class="req">*</span></label>
+      <textarea
+        id="narration"
+        name="field-0"
+        placeholder="e.g. Real Madrid shocked Bayern Munich 3-1..."
+        required
+      ></textarea>
+      <div class="counter-box" id="counter-box">
+        Szacowany czas: <strong id="wc-dur">&mdash;</strong>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="language">language<span class="req">*</span></label>
+      <select id="language" name="field-1" required>
+        <option value="">— select —</option>
+        <option value="English">English</option>
+        <option value="French">French</option>
+        <option value="Portuguese">Portuguese</option>
+        <option value="Swahili">Swahili</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="text">text<span class="req">*</span></label>
+      <select id="text" name="field-2" required>
+        <option value="">— select —</option>
+        <option value="Show text">Show text</option>
+        <option value="Hide text">Hide text</option>
+      </select>
+    </div>
+
+    <button type="submit">Generate video</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  var ta = document.getElementById('narration');
+  var el = document.getElementById('wc-dur');
+
+  function update() {
+    var words = ta.value.trim().split(/\s+/).filter(function (w) { return w.length > 0; }).length;
+    if (words < 1) {
+      el.textContent = '—';
+    } else {
+      var secs = Math.min(45, Math.max(20, Math.round(words / 2.6)));
+      el.textContent = secs + ' sek';
+    }
+  }
+
+  ta.addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>
