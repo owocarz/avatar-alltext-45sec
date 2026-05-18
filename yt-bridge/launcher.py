@@ -1,12 +1,12 @@
 """
 yt-bridge launcher — single entry point that:
-  1. starts the local Flask bridge (bridge.py) as a subprocess
-  2. starts cloudflared quick tunnel, captures the trycloudflare.com URL
-  3. SSHes into the VPS, updates YT_BRIDGE_URL in /docker/yt-clip/.env
-  4. recreates the yt-clip container so the new URL takes effect
+  1. kills any orphaned cloudflared processes from previous runs
+  2. starts the local Flask bridge (bridge.py) as a subprocess
+  3. starts cloudflared quick tunnel, captures the trycloudflare.com URL
+  4. SSHes into the VPS, updates YT_BRIDGE_URL in /docker/yt-clip/.env
   5. monitors both subprocesses and restarts on crash
 
-Designed for Windows Startup (shell:startup) — fully unattended.
+Designed for Windows Task Scheduler (At startup) — fully unattended.
 Logs to ~/yt-bridge/launcher.log.
 """
 import os
@@ -51,6 +51,7 @@ VPS_USER = os.environ.get("VPS_USER", "root")
 VPS_PASS = os.environ.get("VPS_PASS", "")
 VPS_ENV = os.environ.get("VPS_ENV", "/docker/yt-clip/.env")
 VPS_RESTART_CMD = os.environ.get("VPS_RESTART_CMD", "cd /docker/yt-clip && docker compose up -d 2>&1")
+BRIDGE_SECRET = os.environ.get("BRIDGE_SECRET", "").strip()
 
 # ---- Logging --------------------------------------------------------------
 _log_lock = threading.Lock()
@@ -67,42 +68,57 @@ def log(msg):
             pass
 
 
-def push_url_to_vps(public_url):
-    """Update YT_BRIDGE_URL via HTTP (no container restart) + persist to .env via SSH."""
+def push_url_to_vps(public_url, retries=3, retry_delay=10):
+    """Update YT_BRIDGE_URL via HTTP (no container restart) + persist to .env via SSH.
+    Retries up to `retries` times with `retry_delay` seconds between attempts.
+    """
     log(f"Pushing URL to VPS: {public_url}")
-    # Step 1: hot-update in-memory URL — no container restart, no request interruption
-    try:
-        req = urllib.request.Request(
-            "https://yt-clip.srv1278625.hstgr.cloud/update_bridge_url",
-            data=f'{{"url": "{public_url}"}}'.encode(),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            body = resp.read().decode(errors="ignore")
-        log(f"VPS hot-update OK: {body[:200]}")
-    except Exception as e:
-        log(f"VPS hot-update FAILED (will still persist via SSH): {e}")
-    # Step 2: persist to .env so next container restart also gets correct URL
-    try:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(VPS_HOST, username=VPS_USER, password=VPS_PASS, timeout=30)
-        cmd = (
-            f"if grep -q '^YT_BRIDGE_URL=' {VPS_ENV}; then "
-            f"  sed -i 's|^YT_BRIDGE_URL=.*|YT_BRIDGE_URL={public_url}|' {VPS_ENV}; "
-            f"else "
-            f"  echo 'YT_BRIDGE_URL={public_url}' >> {VPS_ENV}; "
-            f"fi"
-        )
-        _, stdout, stderr = ssh.exec_command(cmd, timeout=30)
-        stdout.read()
-        ssh.close()
-        log(f"VPS .env persisted OK")
-        return True
-    except Exception as e:
-        log(f"VPS .env persist FAILED: {e}")
-        return False
+
+    def _attempt():
+        hot_ok = False
+        # Step 1: hot-update in-memory URL — no container restart
+        try:
+            req = urllib.request.Request(
+                "https://yt-clip.srv1278625.hstgr.cloud/update_bridge_url",
+                data=f'{{"url": "{public_url}"}}'.encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                body = resp.read().decode(errors="ignore")
+            log(f"VPS hot-update OK: {body[:200]}")
+            hot_ok = True
+        except Exception as e:
+            log(f"VPS hot-update FAILED: {e}")
+        # Step 2: persist to .env so next container restart also gets correct URL
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(VPS_HOST, username=VPS_USER, password=VPS_PASS, timeout=30)
+            cmd = (
+                f"if grep -q '^YT_BRIDGE_URL=' {VPS_ENV}; then "
+                f"  sed -i 's|^YT_BRIDGE_URL=.*|YT_BRIDGE_URL={public_url}|' {VPS_ENV}; "
+                f"else "
+                f"  echo 'YT_BRIDGE_URL={public_url}' >> {VPS_ENV}; "
+                f"fi"
+            )
+            _, stdout, _ = ssh.exec_command(cmd, timeout=30)
+            stdout.read()
+            ssh.close()
+            log(f"VPS .env persisted OK")
+            return True
+        except Exception as e:
+            log(f"VPS .env persist FAILED: {e}")
+            return hot_ok  # partial success if at least hot-update worked
+
+    for attempt in range(1, retries + 1):
+        if _attempt():
+            return True
+        if attempt < retries:
+            log(f"VPS push attempt {attempt}/{retries} failed — retrying in {retry_delay}s")
+            time.sleep(retry_delay)
+    log(f"VPS push FAILED after {retries} attempts — will retry on next tunnel restart")
+    return False
 
 
 def start_bridge():
@@ -180,6 +196,32 @@ def _acquire_lock():
     return True
 
 
+def kill_orphaned_cloudflared():
+    """Kill any cloudflared.exe processes left over from previous launcher runs."""
+    try:
+        result = subprocess.run(
+            ["tasklist", "/fi", "imagename eq cloudflared.exe", "/fo", "csv", "/nh"],
+            capture_output=True, text=True, timeout=10,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        count = 0
+        for line in result.stdout.strip().splitlines():
+            if "cloudflared" not in line.lower():
+                continue
+            try:
+                pid = int(line.split(",")[1].strip('"'))
+                subprocess.run(["taskkill", "/f", "/pid", str(pid)],
+                               capture_output=True, timeout=5,
+                               creationflags=subprocess.CREATE_NO_WINDOW)
+                count += 1
+            except Exception:
+                pass
+        if count:
+            log(f"Killed {count} orphaned cloudflared process(es)")
+    except Exception as e:
+        log(f"Orphan cleanup error (non-fatal): {e}")
+
+
 def main():
     try:
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
@@ -188,6 +230,8 @@ def main():
     log("=" * 60)
     log("yt-bridge launcher started")
     log("=" * 60)
+
+    kill_orphaned_cloudflared()
 
     bridge_proc = None
     tunnel_proc = None
@@ -212,6 +256,8 @@ def main():
 
     def _on_url(u):
         current_url["url"] = u
+        tunnel_fail["count"] = 0
+        tunnel_probe["last"] = time.time()  # restart 2-min countdown on new URL
         push_url_to_vps(u)
 
     tunnel_proc = start_tunnel(_on_url)
@@ -222,6 +268,12 @@ def main():
     HEALTH_FAIL_THRESHOLD = 3     # consecutive fails to trigger restart
     HEALTH_TIMEOUT = 15           # per-probe timeout
     last_probe = time.time()
+
+    # Tunnel reachability check (via public Cloudflare URL — catches stuck-but-alive cloudflared)
+    tunnel_fail = {"count": 0}
+    tunnel_probe = {"last": time.time()}  # first probe after full interval, not immediately
+    TUNNEL_HEALTH_INTERVAL = 120  # check public URL every 2 min
+    TUNNEL_FAIL_THRESHOLD = 3     # 3 consecutive fails (~6 min) → kill & restart
 
     # Wakeup detection: if real time jumps forward more than expected, system was suspended
     last_loop = time.time()
@@ -280,6 +332,40 @@ def main():
                     except Exception:
                         pass
                     health_fail_count = 0
+
+            # Tunnel reachability check via public Cloudflare URL
+            # Catches stuck-but-alive cloudflared that isn't actually forwarding traffic
+            if now - tunnel_probe["last"] >= TUNNEL_HEALTH_INTERVAL and current_url["url"]:
+                tunnel_probe["last"] = now
+                try:
+                    req = urllib.request.Request(
+                        current_url["url"] + "/",
+                        headers={
+                            "Authorization": f"Bearer {BRIDGE_SECRET}",
+                            "User-Agent": "yt-bridge-tunnel-healthz/1",
+                        },
+                    )
+                    with urllib.request.urlopen(req, timeout=HEALTH_TIMEOUT) as resp:
+                        if 200 <= resp.status < 400:
+                            if tunnel_fail["count"] > 0:
+                                log(f"Tunnel public URL OK after {tunnel_fail['count']} fails")
+                            tunnel_fail["count"] = 0
+                        else:
+                            tunnel_fail["count"] += 1
+                            log(f"Tunnel public URL HTTP {resp.status} ({tunnel_fail['count']}/{TUNNEL_FAIL_THRESHOLD})")
+                except Exception as e:
+                    tunnel_fail["count"] += 1
+                    log(f"Tunnel public URL FAIL {type(e).__name__}: {e} ({tunnel_fail['count']}/{TUNNEL_FAIL_THRESHOLD})")
+
+                if tunnel_fail["count"] >= TUNNEL_FAIL_THRESHOLD:
+                    log("Tunnel stuck (alive but unreachable) — killing cloudflared for fresh restart")
+                    try:
+                        tunnel_proc.terminate()
+                    except Exception:
+                        pass
+                    tunnel_fail["count"] = 0
+                    current_url["url"] = None
+
         except Exception as _loop_err:
             log(f"Monitor loop error (continuing): {_loop_err}")
 
