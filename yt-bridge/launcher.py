@@ -90,25 +90,30 @@ def push_url_to_vps(public_url, retries=3, retry_delay=10):
             hot_ok = True
         except Exception as e:
             log(f"VPS hot-update FAILED: {e}")
-        # Step 2: persist to .env so next container restart also gets correct URL
+        # Step 2: persist to .env + recreate container via docker compose up -d
+        # docker compose restart does NOT reload .env — only up -d does
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(VPS_HOST, username=VPS_USER, password=VPS_PASS, timeout=30)
-            cmd = (
+            env_cmd = (
                 f"if grep -q '^YT_BRIDGE_URL=' {VPS_ENV}; then "
                 f"  sed -i 's|^YT_BRIDGE_URL=.*|YT_BRIDGE_URL={public_url}|' {VPS_ENV}; "
                 f"else "
                 f"  echo 'YT_BRIDGE_URL={public_url}' >> {VPS_ENV}; "
                 f"fi"
             )
-            _, stdout, _ = ssh.exec_command(cmd, timeout=30)
+            _, stdout, _ = ssh.exec_command(env_cmd, timeout=30)
             stdout.read()
-            ssh.close()
             log(f"VPS .env persisted OK")
+            # Recreate container so new .env is baked in (survives future restarts)
+            _, stdout, _ = ssh.exec_command(VPS_RESTART_CMD, timeout=60)
+            stdout.read()
+            log(f"VPS container recreated OK")
+            ssh.close()
             return True
         except Exception as e:
-            log(f"VPS .env persist FAILED: {e}")
+            log(f"VPS .env/restart FAILED: {e}")
             return hot_ok  # partial success if at least hot-update worked
 
     for attempt in range(1, retries + 1):
