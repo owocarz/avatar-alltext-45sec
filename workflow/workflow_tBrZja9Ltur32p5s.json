@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-17T14:57:54.631Z",
+  "updatedAt": "2026-05-27T10:43:13.980Z",
   "createdAt": "2026-05-16T16:34:38.433Z",
   "id": "tBrZja9Ltur32p5s",
   "name": "Avatar ALL-TEXT 45sec Generator",
@@ -89,7 +89,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 100,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": {{ JSON.stringify('Extract two football team names from this text. Return ONLY valid JSON with no explanation:\\n{\"home_team\": \"TeamName1\", \"away_team\": \"TeamName2\"}\\nIf no specific teams found, return: {\"home_team\": \"football\", \"away_team\": \"match\"}\\n\\nText: ' + $json.narration) }}\n  }]\n}",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 150,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": {{ JSON.stringify(\"You are a football text analyzer. Extract team names from the text using STRICT rules.\\n\\nRULES (apply in order):\\n1. If TWO teams playing each other are explicitly mentioned, return both as home_team/away_team.\\n2. If only ONE team is explicitly mentioned, return that team as home_team and leave away_team empty (\\\"\\\").\\n3. If NO team is mentioned BUT a coach/manager/player/footballer is mentioned, you MUST infer their CURRENT club using your knowledge of 2025-2026 football season. Examples:\\n   - Pep Guardiola -> Manchester City\\n   - Mikel Arteta -> Arsenal\\n   - Jurgen Klopp -> Liverpool (last major club)\\n   - Kylian Mbappe -> Real Madrid\\n   - Erling Haaland -> Manchester City\\n   - Lionel Messi -> Inter Miami\\n   - Cristiano Ronaldo -> Al Nassr\\n   - Vinicius Junior -> Real Madrid\\n   - Use YOUR knowledge for any other name.\\n   This step is OBLIGATORY. Do NOT fall back to football/match if any football figure is in the text.\\n4. ONLY if text has ZERO football content (no team, no player, no coach, no club, no league), return:\\n   {\\\"home_team\\\": \\\"football\\\", \\\"away_team\\\": \\\"match\\\"}\\n\\nReturn ONLY valid JSON with no explanation, no markdown, no preamble.\\nFormat: {\\\"home_team\\\": \\\"...\\\", \\\"away_team\\\": \\\"...\\\"}\\n\\nText: \" + $json.narration) }}\n  }]\n}",
         "options": {
           "timeout": 15000
         }
@@ -196,7 +196,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://yt-clip.srv1278625.hstgr.cloud/clip",
+        "url": "https://yt-clip.zaxavatar.win/clip",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -221,9 +221,7 @@
         560,
         -736
       ],
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 120000
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -650,7 +648,10 @@
           "id": "2KK8HrxUmGjSQnpu",
           "name": "Shotstack API"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
     },
     {
       "parameters": {
@@ -815,7 +816,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://46.202.190.186:61880/message/sendMedia/PremierLeague",
+        "url": "http://evolution-api-ipy2-api-1:8080/message/sendMedia/PremierLeague",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1128,9 +1129,9 @@
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "e96b8036-9487-4c47-923f-753e903a4bd5",
-  "activeVersionId": "e96b8036-9487-4c47-923f-753e903a4bd5",
-  "versionCounter": 31,
+  "versionId": "d0390dab-6017-4e22-a8c7-490d6b430e86",
+  "activeVersionId": "d0390dab-6017-4e22-a8c7-490d6b430e86",
+  "versionCounter": 53,
   "triggerCount": 1,
   "shared": [
     {
@@ -1160,9 +1161,9 @@
     }
   ],
   "activeVersion": {
-    "updatedAt": "2026-05-17T14:57:54.634Z",
-    "createdAt": "2026-05-17T14:57:54.634Z",
-    "versionId": "e96b8036-9487-4c47-923f-753e903a4bd5",
+    "updatedAt": "2026-05-27T10:43:13.985Z",
+    "createdAt": "2026-05-27T10:43:13.985Z",
+    "versionId": "d0390dab-6017-4e22-a8c7-490d6b430e86",
     "workflowId": "tBrZja9Ltur32p5s",
     "nodes": [
       {
@@ -1247,7 +1248,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 100,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": {{ JSON.stringify('Extract two football team names from this text. Return ONLY valid JSON with no explanation:\\n{\"home_team\": \"TeamName1\", \"away_team\": \"TeamName2\"}\\nIf no specific teams found, return: {\"home_team\": \"football\", \"away_team\": \"match\"}\\n\\nText: ' + $json.narration) }}\n  }]\n}",
+          "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 150,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": {{ JSON.stringify(\"You are a football text analyzer. Extract team names from the text using STRICT rules.\\n\\nRULES (apply in order):\\n1. If TWO teams playing each other are explicitly mentioned, return both as home_team/away_team.\\n2. If only ONE team is explicitly mentioned, return that team as home_team and leave away_team empty (\\\"\\\").\\n3. If NO team is mentioned BUT a coach/manager/player/footballer is mentioned, you MUST infer their CURRENT club using your knowledge of 2025-2026 football season. Examples:\\n   - Pep Guardiola -> Manchester City\\n   - Mikel Arteta -> Arsenal\\n   - Jurgen Klopp -> Liverpool (last major club)\\n   - Kylian Mbappe -> Real Madrid\\n   - Erling Haaland -> Manchester City\\n   - Lionel Messi -> Inter Miami\\n   - Cristiano Ronaldo -> Al Nassr\\n   - Vinicius Junior -> Real Madrid\\n   - Use YOUR knowledge for any other name.\\n   This step is OBLIGATORY. Do NOT fall back to football/match if any football figure is in the text.\\n4. ONLY if text has ZERO football content (no team, no player, no coach, no club, no league), return:\\n   {\\\"home_team\\\": \\\"football\\\", \\\"away_team\\\": \\\"match\\\"}\\n\\nReturn ONLY valid JSON with no explanation, no markdown, no preamble.\\nFormat: {\\\"home_team\\\": \\\"...\\\", \\\"away_team\\\": \\\"...\\\"}\\n\\nText: \" + $json.narration) }}\n  }]\n}",
           "options": {
             "timeout": 15000
           }
@@ -1354,7 +1355,7 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "https://yt-clip.srv1278625.hstgr.cloud/clip",
+          "url": "https://yt-clip.zaxavatar.win/clip",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -1379,9 +1380,7 @@
           560,
           -736
         ],
-        "retryOnFail": true,
-        "maxTries": 3,
-        "waitBetweenTries": 120000
+        "retryOnFail": false
       },
       {
         "parameters": {
@@ -1808,7 +1807,10 @@
             "id": "2KK8HrxUmGjSQnpu",
             "name": "Shotstack API"
           }
-        }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 30000
       },
       {
         "parameters": {
@@ -1973,7 +1975,7 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "http://46.202.190.186:61880/message/sendMedia/PremierLeague",
+          "url": "http://evolution-api-ipy2-api-1:8080/message/sendMedia/PremierLeague",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -2277,18 +2279,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-05-17T14:57:54.695Z",
-        "id": 548,
+        "createdAt": "2026-05-27T10:43:14.199Z",
+        "id": 582,
         "workflowId": "tBrZja9Ltur32p5s",
-        "versionId": "e96b8036-9487-4c47-923f-753e903a4bd5",
+        "versionId": "d0390dab-6017-4e22-a8c7-490d6b430e86",
         "event": "deactivated",
         "userId": "91ac2a43-b6ad-478d-b710-3e1ab1e14acd"
       },
       {
-        "createdAt": "2026-05-17T14:57:54.720Z",
-        "id": 549,
+        "createdAt": "2026-05-27T10:43:14.301Z",
+        "id": 583,
         "workflowId": "tBrZja9Ltur32p5s",
-        "versionId": "e96b8036-9487-4c47-923f-753e903a4bd5",
+        "versionId": "d0390dab-6017-4e22-a8c7-490d6b430e86",
         "event": "activated",
         "userId": "91ac2a43-b6ad-478d-b710-3e1ab1e14acd"
       }
